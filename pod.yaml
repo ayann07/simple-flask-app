@@ -1,0 +1,24 @@
+apiVersion: v1
+# This tells Kubernetes which version of its API to use to create this object. Different objects (like Deployments, Ingresses, or Pods) might use different API versions
+kind: Pod
+# This specifies the exact type of Kubernetes resource you are trying to create. In this case, you are telling Kubernetes to spin up a Pod.
+metadata:
+# This specifies the exact type of Kubernetes resource you are trying to create. In this case, you are telling Kubernetes to spin up a Pod.
+  name: nginx
+  # Every object in Kubernetes needs a unique name. This is the exact name you will use if you want to look up, delete, or check the logs for this specific Pod later (e.g., kubectl get pod nginx).
+  labels:
+  # Labels are incredibly important in Kubernetes. They are custom key-value pairs used to tag, organize, and filter resources. Other Kubernetes objects (like Services) use these labels to figure out which Pods to send web traffic to.
+    app: nginx
+    tier: frontend
+    # These are just custom tags you've created
+
+spec:
+# It tells Kubernetes exactly what needs to be running inside this Pod.
+  containers:
+  # A Pod is essentially a wrapper for one or more containers. This field takes a list (indicated by the -) of all the containers you want to run inside this single Pod.
+  - name: nginx
+    # This is the name of the specific container inside the Pod
+    image: nginx
+    # This tells Kubernetes exactly which software package to run. It will reach out to a container registry (like Docker Hub by default), download the official nginx image, and run it inside the container.
+
+

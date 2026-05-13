@@ -1,6 +1,8 @@
 name: Generate ASCII Network
+# This gives your entire workflow a title.
 
 on: push
+# This is your trigger. GitHub will automatically run this entire process every single time you push new code to your repository.
 
 jobs:
     ascii_job:
@@ -8,14 +10,18 @@ jobs:
         steps:
         - name: Checkout Repo
           uses: actions/checkout@v4
+        # This is the most important step! Because your server starts out completely empty, this action securely downloads all the files from your GitHub repository onto that Ubuntu server so you can use them.
     
 
         - name: Executing shell script
           run: |
             chmod +x ascii-script.sh
             ./ascii-script.sh
+          
+        #   run: |: The pipe symbol (|) tells GitHub that you are about to write a multi-line script, rather than just a single command.
 
+        # chmod +x ascii-script.sh: This changes the permissions of a file in your repository named ascii-script.sh. The +x stands for "executable," meaning you are telling the Linux server, "Treat this file as a program that can be run."
 
-        
-        
+        # ./ascii-script.sh: Finally, this actually runs the script. Whatever custom code you wrote inside ascii-script.sh will now execute on the server.
 
+    

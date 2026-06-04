@@ -1,0 +1,26 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+# kind: HorizontalPodAutoscaler: Tells Kubernetes to create an HPA resource. "Horizontal" scaling means adding more machines (Pods), as opposed to "Vertical" scaling, which means giving a single machine more RAM or CPU.
+metadata:
+  name: simple-flask-app
+  namespace: simple-flask-prod
+  # namespace: simple-flask-prod: You placed this perfectly in your new production namespace!
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: simple-flask-app
+    # scaleTargetRef: The HPA does not create Pods itself. Instead, it acts like a manager. You are telling it to take control of the Deployment named simple-flask-app. When traffic spikes, the HPA will literally edit your Deployment's replicas count on the fly.
+  minReplicas: 2
+  # minReplicas: 2: Even if absolutely zero users are visiting your website at 3:00 AM, Kubernetes will never scale down below 2 Pods (ensuring high availability).
+  maxReplicas: 5
+  # maxReplicas: 5: If you go viral, Kubernetes is allowed to spin up to 5 Pods. This is your "budget protection" so a traffic spike doesn't accidentally spin up 1,000 Pods and drain your Azure credits.
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        # name: cpu: The HPA is looking specifically at the CPU usage of your containers. (Note: This only works because you set CPU requests in your Deployment YAML earlier!)
+        target:
+          type: Utilization
+          averageUtilization: 60
+          # averageUtilization: 60: This is the magic number. The HPA calculates the average CPU usage across all your running Pods. If the average stays above 60%, the HPA panics and adds a new Pod. Adding a new Pod spreads the traffic out, which brings the average CPU down.

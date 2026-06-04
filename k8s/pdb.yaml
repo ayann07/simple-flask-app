@@ -1,0 +1,15 @@
+#  PodDisruptionBudget (PDB) : Imagine your cloud provider (Azure) needs to upgrade the underlying virtual machines in your cluster. To do this, Kubernetes will gently "drain" a Node, evicting all the Pods on it so the server can reboot.
+
+# If you have 2 Flask Pods, and they happen to be on the same Node, or Kubernetes tries to upgrade two Nodes at the exact same time, it might evict both of your Pods simultaneously. Boom. Your website is offline, not because of a crash, but because Kubernetes was doing routine maintenance!
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+# kind: PodDisruptionBudget: This tells Kubernetes to create a policy rule that acts as a strict guardrail for cluster operations.
+metadata:
+  name: simple-flask-app
+  namespace: simple-flask-prod
+spec:
+  minAvailable: 1
+  # During voluntary disruptions, keep at least N pods available.
+  selector:
+    matchLabels:
+      app: simple-flask-app

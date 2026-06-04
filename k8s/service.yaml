@@ -1,11 +1,18 @@
 apiVersion: v1
 kind: Service
+# apiVersion & kind: Tells Kubernetes to create a Service. Because Pods (your app containers) are constantly being created and destroyed by the Deployment, their internal IP addresses change all the time. A Service acts as a reliable, permanent IP address and load balancer that sits in front of those shifting Pods.
 metadata:
   name: simple-flask-app
+  namespace: simple-flask-prod
+# metadata.name: Names the resource simple-flask-app. This is critical: If you look back at your Ingress YAML, it explicitly routed traffic to a backend service with this exact name.
 spec:
   type: ClusterIP
+  # type: ClusterIP: This is the default Service type in Kubernetes. It means this Service is only given an internal IP address that is reachable from inside the cluster. This is perfect for your setup, because your Ingress controller handles the public-facing internet traffic and then securely passes it internally to this ClusterIP.
   selector:
     app: simple-flask-app
+  # selector: app: simple-flask-app: This is how the Service knows where to send the traffic. It constantly scans the cluster for any Pods that have the label app: simple-flask-app (which, as you know, your Deployment automatically attaches to every Pod it creates) and adds them to its internal load-balancing list.
   ports:
     - port: 80
+      # port: 80: This is the port the Service itself is listening on. Your Ingress YAML said "send traffic to Port 80," so the Service catches it here.
       targetPort: 5000
+      # targetPort: 5000: Once the Service catches the traffic on Port 80, it forwards it to Port 5000 on the destination Pods. If you recall your Deployment YAML, Port 5000 is exactly where your Flask app is listening.

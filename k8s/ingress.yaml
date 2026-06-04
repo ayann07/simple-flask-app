@@ -1,16 +1,25 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
+# apiVersion & kind: Tells Kubernetes to create an Ingress resource. Unlike a Service (which generally handles internal networking), an Ingress is specifically designed to route external HTTP and HTTPS traffic into the cluster.
 metadata:
   name: simple-flask-app
+  namespace: simple-flask-prod
+# metadata.name: Names the rule simple-flask-app.
 spec:
   ingressClassName: nginx
+  # ingressClassName: nginx: An Ingress manifest is just a set of rules; it doesn't actually route traffic itself. It needs a piece of software called an "Ingress Controller" to do the heavy lifting. This line tells Kubernetes, "Hey, I want the NGINX ingress controller to read these rules and handle this traffic." (NGINX is one of the most popular load balancers used in Kubernetes).
   rules:
+  # rules: This is where you define how incoming traffic should be handled. Because there is no specific host defined here, this rule applies to any web traffic hitting the ingress controller's IP address.
     - http:
         paths:
           - path: /
             pathType: Prefix
+        # path: / & pathType: Prefix: This dictates that any URL path that starts with / (which is literally every request, like yourdomain.com/ or yourdomain.com/users) will be caught by this rule.
             backend:
+            # backend: Once the rule above catches the traffic, this tells the Ingress where to send it.
               service:
                 name: simple-flask-app
+              # service.name: It routes the traffic to a Kubernetes Service named simple-flask-app. (Note: You would need a separate Service YAML to create this, acting as the bridge between this Ingress and your Deployment).
                 port:
                   number: 80
+              # port.number: 80: It sends the traffic to port 80 on that Service.

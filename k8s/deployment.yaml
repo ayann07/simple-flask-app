@@ -1,34 +1,72 @@
 apiVersion: apps/v1
 kind: Deployment
+# apiVersion & kind: These tell Kubernetes what type of resource is being created. A Deployment ensures that a specified number of application instances (Pods) are running at all times and handles updates to those instances safely.
 metadata:
   name: simple-flask-app
+  namespace: simple-flask-prod
   labels:
     app: simple-flask-app
+# metadata: This gives the Deployment a name (simple-flask-app) and attaches a label to it so it can be easily identified or grouped with other resources.
 spec:
   replicas: 2
+  # replicas: 2: This is the scaling instruction. It tells Kubernetes to always keep exactly two instances (Pods) of your Flask app running. If one crashes, Kubernetes will automatically spin up a replacement.
   selector:
     matchLabels:
       app: simple-flask-app
+  # selector: This is how the Deployment knows which Pods it is responsible for managing. It will look for any Pods that have the label app: simple-flask-app.
   template:
+  # template: This is the blueprint used to create the individual Pods.
     metadata:
       labels:
         app: simple-flask-app
+    # metadata.labels: Every Pod created from this blueprint will automatically get the app: simple-flask-app label (which matches the selector mentioned above).
+  
     spec:
       containers:
         - name: simple-flask-app
+          # name: The name of the specific container inside the Pod.
           image: ayansimpleflaskacr.azurecr.io/simple-flask-app:v1
+          # image: The exact Docker image to run. This URL indicates the image is hosted in an Azure Container Registry (ACR), and you are deploying version tag v1.
           imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent: Kubernetes will only download the image from Azure if it doesn't already have it cached locally on the node.
+          envFrom:
+            - configMapRef:
+                name: simple-flask-app-config
+          # envFrom: Instead of hardcoding passwords or environment variables here, the container will load them dynamically from a separate Kubernetes resource called a ConfigMap named simple-flask-app-config.
           ports:
             - containerPort: 5000
+          # ports: Tells Kubernetes that the Flask application inside the container is listening on port 5000.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          
+          # Purpose: Checks if the application has successfully booted up. It hits the /health endpoint on port 5000.
+
+          # Timing: It waits 5 seconds to start, then checks every 5 seconds. It will try a maximum of 12 times (up to 60 seconds) before giving up and restarting the container. The other probes are disabled until this one succeeds.
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: 5000
             initialDelaySeconds: 5
             periodSeconds: 10
+          # Purpose: Checks if the app is ready to receive web traffic. If this fails, Kubernetes won't restart the app, but it will stop sending user requests to it until it recovers.
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: 5000
             initialDelaySeconds: 15
             periodSeconds: 20
+          # Purpose: Continuously checks if the app is completely frozen or deadlined. If this probe fails, Kubernetes assumes the app is broken beyond repair and will kill and restart the container.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            # requests (The Minimum): The container is guaranteed at least 100 millicores of CPU (1/10th of a CPU core) and 128 Megabytes of RAM. Kubernetes uses this to decide which server node has enough room to host the Pod.
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            # limits (The Maximum): The container is not allowed to use more than 500 millicores of CPU (half a core) and 512 Megabytes of RAM. If it tries to use more memory than this limit, Kubernetes will terminate it with an Out-Of-Memory (OOM) error to protect the rest of the system.

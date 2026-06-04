@@ -14,7 +14,7 @@ ACR_LOGIN_SERVER="${ACR_LOGIN_SERVER:-ayansimpleflaskacr.azurecr.io}"
 IMAGE_NAME="${IMAGE_NAME:-simple-flask-app}"
 DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-simple-flask-app}"
 CONTAINER_NAME="${CONTAINER_NAME:-simple-flask-app}"
-NAMESPACE="${NAMESPACE:-default}"
+NAMESPACE="${NAMESPACE:-simple-flask-prod}"
 PLATFORM="${PLATFORM:-linux/amd64}"
 TAG="${1:-$(date +%Y%m%d%H%M%S)}"
 
@@ -25,7 +25,7 @@ IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${TAG}"
 
 # IMAGE_NAME, DEPLOYMENT_NAME, CONTAINER_NAME: Default to simple-flask-app.
 
-# NAMESPACE: The Kubernetes namespace (defaults to default).
+# NAMESPACE: The Kubernetes namespace (defaults to simple-flask-prod).
 
 # PLATFORM: The target CPU architecture for the Docker image (defaults to linux/amd64).
 

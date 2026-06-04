@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+# apiVersion & kind: These tell Kubernetes to create a ConfigMap. A ConfigMap is a Kubernetes object used to store non-confidential data in key-value pairs.
+metadata:
+  name: simple-flask-app-config
+  namespace: simple-flask-prod
+# metadata.name: This names the resource simple-flask-app-config. This exact name is crucial because your Deployment manifest specifically calls out this name to link the two together.
+data:
+# data: This is the payload of the ConfigMap. Underneath this, you can list as many configuration variables as your application needs.
+  APP_ENV: "production"
+  # APP_ENV: "production": You are creating a key called APP_ENV with the value "production".

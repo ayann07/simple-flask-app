@@ -30,7 +30,7 @@ config:
 # config: This sets an environment variable for your app. Your Flask app will know it is running in production mode.
 
 secret:
-  enabled: true
+  enabled: false
   existingName: simple-flask-app-secret
 # secret: Your app needs some sensitive data (like passwords or database connection strings). Instead of hardcoding them here, you are telling Helm to securely hook up an existing Kubernetes Secret named simple-flask-app-secret.
 

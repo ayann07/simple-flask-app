@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+  # This tells GitHub to run this entire pipeline automatically the second you push new code to the main branch.
   workflow_dispatch:
     inputs:
       image_tag:
         description: Optional image tag. Defaults to the commit SHA.
         required: false
+  # workflow_dispatch: This creates a "Run Workflow" button in the GitHub UI, allowing you to trigger this pipeline manually. It also lets you type in a custom image_tag if you want to deploy a specific version manually.
 
 env:
   RESOURCE_GROUP: simple-flask-rg
@@ -17,16 +19,21 @@ env:
   ACR_LOGIN_SERVER: ayansimpleflaskacr.azurecr.io
   IMAGE_NAME: simple-flask-app
   CHART_DIR: ./k8s-helm
+# This is the master list of names for your Azure infrastructure. It defines where your cluster is (AKS_NAME), where your image registry is (ACR_LOGIN_SERVER), and where your Helm chart lives (CHART_DIR). Putting them at the top makes the rest of the script much cleaner.
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # GitHub spins up a brand-new, temporary Linux server (ubuntu-latest) to run your deployment. Once the deployment finishes, this server is destroyed.
 
     steps:
+      # This is the chronological list of commands executed on that temporary Linux server:
       - name: Checkout
         uses: actions/checkout@v4
+        # Downloads your repository's code onto the temporary GitHub server so it can be built.
 
       - name: Select deployment target
+        # This bash script figures out what version to build.
         id: target
         shell: bash
         run: |
@@ -45,7 +52,8 @@ jobs:
           echo "release_name=simple-flask-app" >> "$GITHUB_OUTPUT"
           echo "values_file=k8s-helm/values/prod.yaml" >> "$GITHUB_OUTPUT"
           echo "image_tag=${TAG}" >> "$GITHUB_OUTPUT"
-
+        # If you clicked the manual button and typed a tag, it uses that. If this was an automatic push, it grabs the first 12 characters of the Git commit ID ($GITHUB_SHA::12) and uses that as the unique image version.
+        # It then saves these variables into $GITHUB_OUTPUT, which is GitHub's way of passing variables to the steps happening later in the pipeline.
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -59,6 +67,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      
+        # These steps install all the necessary command-line tools (kubectl, helm, docker) onto the temporary server and securely log into your Azure account using a hidden password (secrets.AZURE_CREDENTIALS).
 
       - name: Get AKS credentials
         run: |
@@ -66,9 +76,11 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --name "$AKS_NAME" \
             --overwrite-existing
-
+  
       - name: Log in to ACR
         run: az acr login --name "$ACR_NAME"
+      
+      # Downloads the security certificates needed to talk to your specific Kubernetes cluster (AKS) and logs into your Azure Container Registry (ACR) so it has permission to upload your Docker image.
 
       - name: Build and push image
         run: |
@@ -76,15 +88,20 @@ jobs:
             --platform linux/amd64 \
             -t "$ACR_LOGIN_SERVER/$IMAGE_NAME:${{ steps.target.outputs.image_tag }}" \
             --push .
+      
+      # This actually builds your Python Flask app into a Docker container and immediately uploads (--push) it to your Azure registry, tagging it with the unique commit ID we figured out in Step 2.
 
       - name: Lint Helm chart
         run: helm lint "$CHART_DIR" -f "${{ steps.target.outputs.values_file }}"
+      
+      # Runs a quick sanity check (lint) on your Helm files to ensure you didn't accidentally make a YAML typo before trying to deploy it.
 
       - name: Create namespace
         run: |
           kubectl create namespace "${{ steps.target.outputs.namespace }}" \
             --dry-run=client \
             -o yaml | kubectl apply -f -
+      # Checks if the simple-flask-prod namespace exists in Kubernetes. If it doesn't, it creates it.
 
       - name: Deploy with Helm
         run: |
@@ -93,9 +110,13 @@ jobs:
             --namespace "${{ steps.target.outputs.namespace }}" \
             --set "image.repository=$ACR_LOGIN_SERVER/$IMAGE_NAME" \
             --set "image.tag=${{ steps.target.outputs.image_tag }}"
+      
+      # This executes the deployment! It tells Helm to install your chart into the cluster.
+      # The magic part: Notice the --set commands. It overrides the generic image.tag: v1 we saw earlier in your values.yaml with the exact Git commit ID we just built. This guarantees the cluster is running the fresh code you just pushed.
 
       - name: Wait for rollout
         run: |
           kubectl rollout status \
             "deployment/${{ steps.target.outputs.release_name }}" \
             --namespace "${{ steps.target.outputs.namespace }}"
+      # Instead of just assuming it worked, GitHub stares at the Kubernetes cluster and waits to make sure the new Pods start up cleanly and pass their health checks. If the app crashes on startup, this step will fail, turning the GitHub action red to alert you.

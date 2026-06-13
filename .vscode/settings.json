@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "helm/**/templates/*.yaml": "helm",
+    "helm/**/templates/*.yml": "helm",
+    "k8s-helm/templates/*.yaml": "helm",
+    "k8s-helm/templates/*.yml": "helm"
+  }
+}

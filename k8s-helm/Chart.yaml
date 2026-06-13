@@ -1,0 +1,14 @@
+# it defines the essential details about the package you are trying to deploy.
+
+apiVersion: v2
+# apiVersion: v2: This specifies the chart's API version. Using v2 tells the system that this chart is built for Helm 3 (older Helm 2 charts used v1).
+name: simple-flask-app
+# name: simple-flask-app: The official name of your Helm package. When you install, list, or search for this package in a Kubernetes cluster, this is the name it will use
+description: Helm chart for the simple Flask app
+# description: A simple, human-readable summary of what this chart actually does.
+type: application
+# type: application: This dictates how Helm treats the chart. application means it is a standard, deployable project. The other option is library, which provides reusable code snippets for other charts but doesn't deploy anything on its own.
+version: 0.1.0
+# version: 0.1.0: This is the version of the Helm chart itself
+appVersion: "1.0.0"
+# appVersion: "1.0.0": This is the version of the actual software running inside the chart. In this case, it means you are deploying version 1.0.0 of your Flask app. This almost always matches the Docker image tag of the code you are deploying.

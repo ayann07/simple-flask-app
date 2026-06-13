@@ -1,0 +1,23 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: simple-flask-app
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: simple-flask-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: simple-flask-app
+  minReplicas: {{ .Values.hpa.minReplicas | int }}
+  maxReplicas: {{ .Values.hpa.maxReplicas | int }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPUUtilizationPercentage | int }}
+{{- end }}

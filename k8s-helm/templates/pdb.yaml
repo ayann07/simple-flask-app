@@ -1,0 +1,14 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: simple-flask-app
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: simple-flask-app
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable  }}
+  selector:
+    matchLabels:
+      app: simple-flask-app
+{{- end }}

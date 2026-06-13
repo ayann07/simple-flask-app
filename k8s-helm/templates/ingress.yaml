@@ -1,0 +1,34 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-flask-app
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: simple-flask-app
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    {{ if .Values.ingress.host }}
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: simple-flask-app
+                port:
+                  number: {{ .Values.service.port | int }}
+    {{ else }}
+    - http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: simple-flask-app
+                port:
+                  number: {{ .Values.service.port | int }}
+    {{ end }}
+{{- end }}

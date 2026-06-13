@@ -1,0 +1,82 @@
+namespace:
+  create: false
+  name: simple-flask-prod
+# namespace: You are telling Helm to deploy this app into a specific section of your Kubernetes cluster called simple-flask-prod. Because create: false is set, you are assuming this namespace has already been created beforehand.
+
+replicaCount: 2
+# replicaCount: 2: You want exactly two copies (called Pods) of your Flask app running at all times to handle the workload.
+
+image:
+  repository: ayansimpleflaskacr.azurecr.io/simple-flask-app
+  tag: v1
+  # repository & tag: This points to exactly where your code lives. You are pulling the v1 version of your app from an Azure Container Registry (ayansimpleflaskacr.azurecr.io).
+  
+  pullPolicy: IfNotPresent
+  # pullPolicy: IfNotPresent: This tells Kubernetes, "Only download this Docker image from Azure if you don't already have a copy saved locally on the server."
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+# service: This creates an internal network load balancer (a ClusterIP). It opens port 80 to the rest of the Kubernetes cluster and silently forwards any traffic it receives straight to your container's port 5000.
+
+container:
+  port: 5000
+# container: Your actual Python Flask code is configured to listen on port 5000 (which is the default for Flask).
+
+config:
+  APP_ENV: production
+# config: This sets an environment variable for your app. Your Flask app will know it is running in production mode.
+
+secret:
+  enabled: true
+  existingName: simple-flask-app-secret
+# secret: Your app needs some sensitive data (like passwords or database connection strings). Instead of hardcoding them here, you are telling Helm to securely hook up an existing Kubernetes Secret named simple-flask-app-secret.
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+  path: /
+  pathType: Prefix
+# ingress: This is the "front door" from the internet. You are enabling an NGINX Ingress controller to route outside web traffic to your app. Because host is "" and path is /, it will catch all web traffic hitting your cluster's public IP address at the root URL.
+
+probes:
+  path: /health
+  # Kubernetes constantly checks the /health URL of your app to make sure it's alive:
+  startup:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 12
+  # startup: Gives your app a little breathing room to boot up. It checks every 5 seconds and will tolerate 12 failures (a whole minute) before giving up and restarting the container.
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  # readiness: Checks if the app is currently able to process web traffic. If this fails, Kubernetes stops sending users to this specific pod until it recovers.
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+  # liveness: Checks if the app has completely frozen or crashed. If this fails, Kubernetes aggressively kills the pod and spins up a brand new one.
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    # requests: The minimum guaranteed server power your app needs to function (100 millicores of CPU and 128 Megabytes of RAM). Kubernetes will use this to find a server with enough free space to host your app.
+  limits:
+    cpu: 500m
+    memory: 512Mi
+    # limits: The absolute maximum power your app is allowed to consume. If your app goes rogue and tries to use more than 512Mi of memory, Kubernetes will kill it to protect the rest of the server.
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 60
+  # hpa (Horizontal Pod Autoscaler): You are making your app smart. It will start with 2 replicas, but if the overall CPU usage crosses 60%, Kubernetes will automatically clone your app to handle the traffic spike, up to a maximum of 5 pods.
+
+pdb:
+  enabled: true
+  minAvailable: 1
+  # pdb (Pod Disruption Budget): A safety net. If a cluster administrator is doing maintenance or upgrading servers, this rule completely forbids them from taking down all your pods at once. It guarantees at least 1 pod is always left running to serve users.

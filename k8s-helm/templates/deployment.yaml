@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-flask-app
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: simple-flask-app
+spec:
+  replicas: {{ .Values.replicaCount | int }}
+  selector:
+    matchLabels:
+      app: simple-flask-app
+  template:
+    metadata:
+      labels:
+        app: simple-flask-app
+    spec:
+      containers:
+        - name: simple-flask-app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: simple-flask-app-config
+            {{ if and .Values.secret.enabled .Values.secret.existingName }}
+            - secretRef:
+                name: {{ .Values.secret.existingName }}
+            {{ end }}
+          ports:
+            - containerPort: {{ .Values.container.port | int }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.container.port | int }}
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds | int }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds | int }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold | int }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.container.port | int }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds | int }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds | int }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.container.port | int }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds | int }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds | int }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,58 @@
+namespace:
+  create: false
+  name: simple-flask-stage
+
+replicaCount: 1
+
+image:
+  repository: ayansimpleflaskacr.azurecr.io/simple-flask-app
+  tag: v1
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+container:
+  port: 5000
+
+config:
+  APP_ENV: staging
+
+secret:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  host: stage.example.com
+  path: /
+  pathType: Prefix
+
+probes:
+  path: /health
+  startup:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 12
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+hpa:
+  enabled: false
+
+pdb:
+  enabled: false

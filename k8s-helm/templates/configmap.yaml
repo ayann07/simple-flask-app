@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simple-flask-app-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: simple-flask-app
+data:
+  {{- toYaml .Values.config | nindent 2 }}

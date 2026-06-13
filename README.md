@@ -79,3 +79,47 @@ When the service shows an `EXTERNAL-IP`, open:
 ```text
 http://<EXTERNAL-IP>
 ```
+
+## CI/CD with GitHub Actions
+
+The workflow in `.github/workflows/deploy.yml` builds the Docker image, pushes it
+to ACR, and deploys the Helm chart to AKS.
+
+- Push to `develop` deploys `stage`.
+- Push to `main` deploys `prod`.
+- You can also run the workflow manually and choose `stage` or `prod`.
+
+Create one GitHub repository secret named `AZURE_CREDENTIALS`.
+
+```bash
+az ad sp create-for-rbac \
+  --name github-simple-flask-cicd \
+  --role contributor \
+  --scopes /subscriptions/fd8b56b8-9346-40dd-982a-5b4f7fe30cfd/resourceGroups/simple-flask-rg \
+  --sdk-auth
+```
+
+Copy the JSON output into:
+
+```text
+GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret
+```
+
+Use this secret name:
+
+```text
+AZURE_CREDENTIALS
+```
+
+Then give the service principal permission to push images to ACR. Use the
+`clientId` value from the JSON output above:
+
+```bash
+APP_ID=<clientId-from-AZURE_CREDENTIALS-json>
+ACR_ID=$(az acr show --name ayansimpleflaskacr --query id --output tsv)
+
+az role assignment create \
+  --assignee "$APP_ID" \
+  --role AcrPush \
+  --scope "$ACR_ID"
+```

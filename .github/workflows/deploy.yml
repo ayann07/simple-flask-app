@@ -1,0 +1,101 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Optional image tag. Defaults to the commit SHA.
+        required: false
+
+env:
+  RESOURCE_GROUP: simple-flask-rg
+  AKS_NAME: simple-flask-aks
+  ACR_NAME: ayansimpleflaskacr
+  ACR_LOGIN_SERVER: ayansimpleflaskacr.azurecr.io
+  IMAGE_NAME: simple-flask-app
+  CHART_DIR: ./k8s-helm
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select deployment target
+        id: target
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            TAG=""
+          fi
+
+          if [[ -z "${TAG}" ]]; then
+            TAG="${GITHUB_SHA::12}"
+          fi
+
+          echo "environment=prod" >> "$GITHUB_OUTPUT"
+          echo "namespace=simple-flask-prod" >> "$GITHUB_OUTPUT"
+          echo "release_name=simple-flask-app" >> "$GITHUB_OUTPUT"
+          echo "values_file=k8s-helm/values/prod.yaml" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$AKS_NAME" \
+            --overwrite-existing
+
+      - name: Log in to ACR
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Build and push image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t "$ACR_LOGIN_SERVER/$IMAGE_NAME:${{ steps.target.outputs.image_tag }}" \
+            --push .
+
+      - name: Lint Helm chart
+        run: helm lint "$CHART_DIR" -f "${{ steps.target.outputs.values_file }}"
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace "${{ steps.target.outputs.namespace }}" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install "${{ steps.target.outputs.release_name }}" "$CHART_DIR" \
+            -f "${{ steps.target.outputs.values_file }}" \
+            --namespace "${{ steps.target.outputs.namespace }}" \
+            --set "image.repository=$ACR_LOGIN_SERVER/$IMAGE_NAME" \
+            --set "image.tag=${{ steps.target.outputs.image_tag }}"
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status \
+            "deployment/${{ steps.target.outputs.release_name }}" \
+            --namespace "${{ steps.target.outputs.namespace }}"
